@@ -5,7 +5,7 @@ import Typography from './Comoponents/Typography';
 
 export default function Onboarding() {
   const router = useRouter();
-   
+
   return (
     <View className="flex-1 bg-white">
       {/* Hero Image */}
@@ -31,17 +31,17 @@ export default function Onboarding() {
       <View className="px-6 mt-10 space-y-4 flex gap-y-12">
         <Button
           title="Find a Service"
-          onPress={() => router.replace('/RegisterUserScreen')} 
+          onPress={() => router.push('/LoginScreen')} 
           variant="primary"
         />
         <Button
           title="Register as Shopkeeper"
-          onPress={() => router.replace('/RegisterShopyScreen')}
+          onPress={() => router.push('./(shopkeeper)/Regs')}
           variant="outline"
         />
         <Button
           title="Login"
-          onPress={() => router.replace('/LoginScreen')}
+          onPress={() => router.push('/LoginScreen')}
           variant="secondary"
         />
       </View>
