@@ -111,3 +111,21 @@ export async function toggleShopkeeperStatus(shopId, currentStatus) {
     throw error;
   }
 }
+
+/**
+ * Send approval notification to shopkeeper
+ */
+export async function sendShopkeeperApprovalNotification(shopkeeperData) {
+  try {
+    // In a real implementation, this would send an actual email
+    // For now, we'll just log it and show an alert
+    console.log(`📧 Approval notification sent to ${shopkeeperData.email}`);
+    console.log(`Welcome message: Your shop "${shopkeeperData.shopName}" has been approved!`);
+    
+    // Simulate email sending
+    return { success: true, message: 'Approval notification sent' };
+  } catch (error) {
+    console.error("Error sending approval notification:", error);
+    return { success: false, message: 'Failed to send notification' };
+  }
+}

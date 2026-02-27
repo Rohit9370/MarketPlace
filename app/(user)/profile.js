@@ -1,24 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+// Replaced react-native-maps with OpenStreetMap
 // import { MapView, Marker } from 'expo-maps';
 import { useRouter } from 'expo-router';
 import { signOut, updatePassword } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    Modal,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+// import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import Avatar from '../Comoponents/Avatar';
 import Typography from '../Comoponents/Typography';
+import OpenStreetMap from '../Components/OpenStreetMap';
 import { BorderRadius, Colors, Shadows, Spacing } from '../constants/designSystem';
 import { logout, updateUser } from '../redux/authSlice';
 import { getUserBookings } from '../Services/booking_service';
@@ -189,8 +191,13 @@ export default function ProfileTab() {
     setMapVisible(true);
   };
 
-  const handleMapPress = (e) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
+  const handleMapPress = (coordinate, type, markerType) => {
+    // Check if coordinate is provided (could be undefined in some cases)
+    if (!coordinate || !coordinate.lat || !coordinate.lng) {
+      return;
+    }
+    
+    const { lat: latitude, lng: longitude } = coordinate;
     setEditData({
       ...editData,
       location: { latitude, longitude }
@@ -846,72 +853,21 @@ export default function ProfileTab() {
             </Typography>
           </View>
 
-          <MapView
-            style={{ flex: 1 }}
-            region={mapRegion}
-            onRegionChangeComplete={setMapRegion}
-            onPress={handleMapPress}
+          <OpenStreetMap
+            initialRegion={mapRegion}
+            markers={editData.location.latitude && editData.location.longitude ? [{
+              latitude: editData.location.latitude,
+              longitude: editData.location.longitude,
+              title: "Your Location",
+              description: "Drag to adjust location",
+              shopId: "current",
+              type: "user"
+            }] : []}
             showsUserLocation={true}
             showsMyLocationButton={true}
-          >
-            {editData.location.latitude && editData.location.longitude && (
-              <Marker
-                coordinate={editData.location}
-                title="Your Location"
-                draggable
-                onDragEnd={handleMapPress}
-              >
-                <View
-                  style={{
-                    alignItems: 'center',
-                  }}
-                >
-                  {/* Pin Head */}
-                  <View
-                    style={{
-                      backgroundColor: Colors.error.main,
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      borderWidth: 4,
-                      borderColor: Colors.neutral[0],
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      ...Shadows.lg,
-                    }}
-                  >
-                    <Ionicons name="location" size={32} color={Colors.neutral[0]} />
-                  </View>
-                  {/* Pin Tail */}
-                  <View
-                    style={{
-                      width: 0,
-                      height: 0,
-                      backgroundColor: 'transparent',
-                      borderStyle: 'solid',
-                      borderLeftWidth: 10,
-                      borderRightWidth: 10,
-                      borderTopWidth: 15,
-                      borderLeftColor: 'transparent',
-                      borderRightColor: 'transparent',
-                      borderTopColor: Colors.error.main,
-                      marginTop: -2,
-                    }}
-                  />
-                  {/* Shadow Circle */}
-                  <View
-                    style={{
-                      width: 20,
-                      height: 8,
-                      borderRadius: 10,
-                      backgroundColor: 'rgba(0,0,0,0.3)',
-                      marginTop: 2,
-                    }}
-                  />
-                </View>
-              </Marker>
-            )}
-          </MapView>
+            onLocationSelect={handleMapPress}
+            style={{ flex: 1 }}
+          />
 
           {/* Location Info Card */}
           {editData.location.latitude && (
@@ -953,7 +909,9 @@ export default function ProfileTab() {
                   </View>
                   <View style={{ flexDirection: 'row', marginTop: Spacing[2], paddingTop: Spacing[2], borderTopWidth: 1, borderTopColor: Colors.border.light }}>
                     <Typography variant="caption" color="secondary" style={{ fontSize: 11 }}>
-                      {editData.location.latitude.toFixed(6)}, {editData.location.longitude.toFixed(6)}
+                      {editData.location.latitude !== undefined && editData.location.longitude !== undefined
+                        ? `${editData.location.latitude.toFixed(6)}, ${editData.location.longitude.toFixed(6)}`
+                        : 'No location set' }
                     </Typography>
                   </View>
                 </>

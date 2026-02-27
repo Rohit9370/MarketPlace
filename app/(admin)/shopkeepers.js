@@ -2,20 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  RefreshControl,
-  ScrollView,
-  Switch,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    RefreshControl,
+    ScrollView,
+    Switch,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Typography from '../Comoponents/Typography';
 import { BorderRadius, Colors, Shadows, Spacing } from '../constants/designSystem';
-import { getAllShopkeepers, toggleShopkeeperStatus } from '../Services/admin_service';
+import { getAllShopkeepers, sendShopkeeperApprovalNotification, toggleShopkeeperStatus } from '../Services/admin_service';
 
 export default function ShopkeepersTab() {
   const router = useRouter();
@@ -69,15 +69,23 @@ export default function ShopkeepersTab() {
       const result = await toggleShopkeeperStatus(shopId, currentStatus);
       
       // Update local state
-      setShopkeepers((prev) =>
-        prev.map((shop) =>
-          shop.id === shopId ? { ...shop, isActive: result.newStatus } : shop
-        )
+      const updatedShopkeepers = shopkeepers.map((shop) =>
+        shop.id === shopId ? { ...shop, isActive: result.newStatus } : shop
       );
+      setShopkeepers(updatedShopkeepers);
+      setFilteredShopkeepers(updatedShopkeepers);
+      
+      // Send notification if activating
+      if (result.newStatus) {
+        const shopkeeperData = updatedShopkeepers.find(shop => shop.id === shopId);
+        if (shopkeeperData) {
+          await sendShopkeeperApprovalNotification(shopkeeperData);
+        }
+      }
       
       Alert.alert(
         'Success',
-        `Shopkeeper ${result.newStatus ? 'activated' : 'deactivated'} successfully`
+        `Shopkeeper ${result.newStatus ? 'activated' : 'deactivated'} successfully${result.newStatus ? ' and notification sent' : ''}`
       );
     } catch (error) {
       console.error('Error toggling status:', error);

@@ -10,13 +10,16 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+// Replaced react-native-maps with OpenStreetMap
+// import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import Avatar from '../Comoponents/Avatar';
 import Typography from '../Comoponents/Typography';
+import OpenStreetMap from '../Components/OpenStreetMap';
 import { categories } from '../constants/categories';
 import { BorderRadius, Colors, Shadows, Spacing } from '../constants/designSystem';
+import { getAggregatedReviews } from '../Services/review_service';
 import { getAllShopkeepers } from '../Services/user_services';
 
 // Calculate distance between two coordinates (Haversine formula)
@@ -78,10 +81,26 @@ export default function HomeTab() {
   const loadShopkeepers = async () => {
     try {
       const shops = await getAllShopkeepers();
-      // Filter only active shopkeepers
-      const activeShops = shops.filter(shop => shop.isActive !== false);
-      setShopkeepers(activeShops);
-      setFilteredShops(activeShops);
+      // Filter only active shopkeepers (isActive can be true, undefined, or null for active shops)
+      const activeShops = shops.filter(shop => shop.isActive !== false && shop.isActive !== 0);
+      
+      // Get aggregated reviews for all shops
+      const shopIds = activeShops.map(shop => shop.id);
+      const reviewsData = await getAggregatedReviews(shopIds);
+      
+      // Add review data to each shop
+      const shopsWithReviews = activeShops.map(shop => {
+        const reviewInfo = reviewsData[shop.id] || { avgRating: 0, totalReviews: 0 };
+        return {
+          ...shop,
+          rating: reviewInfo.avgRating,
+          totalReviews: reviewInfo.totalReviews
+        };
+      });
+      
+      setShopkeepers(shopsWithReviews);
+      setFilteredShops(shopsWithReviews);
+      
     } catch (error) {
       console.error('Error loading shopkeepers:', error);
     } finally {
@@ -143,7 +162,7 @@ export default function HomeTab() {
       }}
     >
       {/* Shop Banner */}
-      {item.shopBanner ? (
+      {item.shopBanner && item.shopBanner.trim() !== '' && !item.shopBanner.includes('placeholder') ? (
         <Image
           source={{ uri: item.shopBanner }}
           style={{
@@ -153,6 +172,9 @@ export default function HomeTab() {
             borderTopRightRadius: BorderRadius.xl,
           }}
           resizeMode="cover"
+          onError={(error) => {
+            console.log('Image load error for shop:', item.shopName, error.nativeEvent.error);
+          }}
         />
       ) : (
         <View
@@ -186,7 +208,7 @@ export default function HomeTab() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="star" size={14} color="#fbbf24" />
               <Typography variant="caption" style={{ marginLeft: Spacing[1] }}>
-                {item.rating || '4.5'}
+                {item.rating ? item.rating.toFixed(1) : '0.0'}
               </Typography>
             </View>
             <Typography variant="caption" color="secondary">
@@ -454,6 +476,7 @@ export default function HomeTab() {
         </View>
       ) : (
         <View style={{ flex: 1, marginTop: Spacing[4] }}>
+          {/* Show message if no shops have location data */}
           {filteredShops.filter(s => s.shopLocation?.latitude && s.shopLocation?.longitude).length === 0 ? (
             <View
               style={{
@@ -476,50 +499,47 @@ export default function HomeTab() {
               </Typography>
             </View>
           ) : (
-            <MapView
-              style={{ flex: 1 }}
+            <OpenStreetMap
               initialRegion={{
                 latitude: userLocation?.latitude || 20.9320,
                 longitude: userLocation?.longitude || 77.7523,
                 latitudeDelta: 0.5,
                 longitudeDelta: 0.5,
               }}
+              markers={[
+                // User's current location marker
+                ...(userLocation?.latitude && userLocation?.longitude ? [{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude,
+                  title: "Your Location",
+                  description: "Current location",
+                  shopId: "user",
+                  type: 'user'
+                }] : []),
+                // Shop markers
+                ...filteredShops
+                  .filter(shop => shop.shopLocation?.latitude && shop.shopLocation?.longitude)
+                  .map(shop => ({
+                    latitude: shop.shopLocation.latitude,
+                    longitude: shop.shopLocation.longitude,
+                    title: shop.shopName,
+                    description: `${shop.shopCategory} • ${shop.shopCity}`,
+                    shopId: shop.id,
+                    type: 'shop'
+                  }))
+              ]}
               showsUserLocation={true}
-              showsMyLocationButton={true}
-            >
-              {filteredShops.map((shop) => (
-                shop.shopLocation?.latitude && shop.shopLocation?.longitude && (
-                  <Marker
-                    key={shop.id}
-                    coordinate={{
-                      latitude: shop.shopLocation.latitude,
-                      longitude: shop.shopLocation.longitude,
-                    }}
-                    title={shop.shopName}
-                    description={`${shop.shopCategory} • ${shop.shopCity}`}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/ShopDetailsScreen',
-                        params: { shopId: shop.id }
-                      });
-                    }}
-                  >
-                    <View
-                      style={{
-                        backgroundColor: Colors.primary[600],
-                        padding: Spacing[2],
-                        borderRadius: BorderRadius.full,
-                        borderWidth: 3,
-                        borderColor: Colors.neutral[0],
-                        ...Shadows.md,
-                      }}
-                    >
-                      <Ionicons name="storefront" size={24} color={Colors.neutral[0]} />
-                    </View>
-                  </Marker>
-                )
-              ))}
-            </MapView>
+              showsMyLocationButton={false}
+              onLocationSelect={(coordinate, shopId, markerType) => {
+                // Only navigate if it's a shop marker, not the user's location
+                if (shopId && shopId !== 'user-location' && shopId !== 'user' && markerType === 'shop') {
+                  router.push({
+                    pathname: '/ShopDetailsScreen',
+                    params: { shopId: shopId }
+                  });
+                }
+              }}
+            />
           )}
         </View>
       )}

@@ -2,18 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  Linking,
-  Modal,
-  ScrollView,
-  Share,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    Share,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
@@ -61,7 +62,7 @@ export default function ShopDetailsScreen() {
         
         // Load services for this shop
         setServicesLoading(true);
-        const shopServices = await getShopServices(foundShop.uid);
+        const shopServices = await getShopServices(foundShop.id);
         // Filter only active services
         const activeServices = shopServices.filter(s => s.isActive);
         setServices(activeServices);
@@ -76,6 +77,43 @@ export default function ShopDetailsScreen() {
     }
   };
 
+  const handleNavigate = () => {
+    if (!shop?.shopLocation?.latitude || !shop?.shopLocation?.longitude) {
+      Alert.alert('Location Not Available', 'The shop location is not available');
+      return;
+    }
+
+    const lat = shop.shopLocation.latitude;
+    const lng = shop.shopLocation.longitude;
+    const label = encodeURIComponent(shop.shopName);
+    
+    // Try to open in Google Maps first, fallback to Apple Maps on iOS or general maps
+    const googleMapsUrl = `comgooglemaps://?q=${lat},${lng}&center=${lat},${lng}&zoom=16&views=traffic`;
+    const appleMapsUrl = `maps://${lat},${lng}?q=${label}`;
+    const webMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    
+    // Platform-specific handling
+    if (Platform.OS === 'ios') {
+      Linking.canOpenURL(googleMapsUrl)
+        .then(supported => {
+          if (supported) {
+            Linking.openURL(googleMapsUrl);
+          } else {
+            Linking.openURL(appleMapsUrl);
+          }
+        });
+    } else {
+      Linking.canOpenURL(googleMapsUrl)
+        .then(supported => {
+          if (supported) {
+            Linking.openURL(googleMapsUrl);
+          } else {
+            Linking.openURL(webMapsUrl);
+          }
+        });
+    }
+  };
+  
   const handleCall = () => {
     if (!shop?.contactNumber && !shop?.phone) {
       Alert.alert('No Contact', 'Contact number not available');
@@ -384,6 +422,27 @@ export default function ShopDetailsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            onPress={handleNavigate}
+            style={{
+              flex: 1,
+              backgroundColor: Colors.warning.main,
+              paddingVertical: Spacing[4],
+              borderRadius: BorderRadius.xl,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...Shadows.md,
+            }}
+          >
+            <Ionicons name="navigate" size={20} color={Colors.neutral[0]} />
+            <Typography variant="body" weight="semibold" color="inverse" style={{ marginLeft: Spacing[2] }}>
+              Navigate
+            </Typography>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={{ flexDirection: 'row', marginHorizontal: Spacing[6], marginTop: Spacing[3], gap: Spacing[3] }}>
+          <TouchableOpacity
             onPress={handleShare}
             style={{
               flex: 1,
@@ -505,28 +564,81 @@ export default function ShopDetailsScreen() {
                   ...Shadows.sm,
                 }}
               >
-                {/* Service Image */}
-                {service.images && service.images.length > 0 && (
-                  <Image
-                    source={{ uri: service.images[0] }}
-                    style={{
-                      width: '100%',
-                      height: 140,
-                      borderRadius: BorderRadius.lg,
-                      marginBottom: Spacing[3],
-                    }}
-                    resizeMode="cover"
-                  />
-                )}
+                {/* Service Images */}
+                <View style={{ marginBottom: Spacing[3] }}>
+                  {service.images && service.images.length > 0 ? (
+                    <FlatList
+                      data={service.images.slice(0, 3)} // Show max 3 images
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      renderItem={({ item, index }) => (
+                        <View style={{ marginRight: index === service.images.length - 1 ? 0 : Spacing[2] }}>
+                          <Image
+                            source={{ uri: item }}
+                            style={{
+                              width: service.images.length === 1 ? '100%' : 120,
+                              height: 140,
+                              borderRadius: BorderRadius.lg,
+                            }}
+                            resizeMode="cover"
+                          />
+                          {service.images.length > 3 && index === 2 && (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                borderRadius: BorderRadius.lg,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Typography variant="body" weight="bold" color="inverse">
+                                +{service.images.length - 3} more
+                              </Typography>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                      keyExtractor={(item, index) => `${service.id}-${index}`}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: '100%',
+                        height: 140,
+                        backgroundColor: Colors.primary[50],
+                        borderRadius: BorderRadius.lg,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: Colors.primary[100],
+                      }}
+                    >
+                      <Ionicons name="image-outline" size={40} color={Colors.primary[300]} />
+                      <Typography variant="caption" color="secondary" style={{ marginTop: Spacing[2] }}>
+                        No images available
+                      </Typography>
+                    </View>
+                  )}
+                </View>
                 
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
                     <Typography variant="body" weight="semibold">
-                      {service.title}
+                      {service.name || service.title || "Unnamed Service"}
                     </Typography>
                     {service.description && (
                       <Typography variant="caption" color="secondary" style={{ marginTop: Spacing[1], lineHeight: 18 }}>
                         {service.description}
+                      </Typography>
+                    )}
+                    {service.duration && (
+                      <Typography variant="caption" color="primary" style={{ marginTop: Spacing[1] }}>
+                        Duration: {service.duration}
                       </Typography>
                     )}
                   </View>

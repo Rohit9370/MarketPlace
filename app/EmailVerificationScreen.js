@@ -48,12 +48,13 @@ const EmailVerificationScreen = () => {
         
         Alert.alert("Success", "Email verified successfully!");
         
+        // Navigate based on role - use push to prevent back navigation
         if (role === "admin") {
-          router.replace('/(admin)/dashboard');
+          router.push('/(admin)/dashboard');
         } else if (role === "shopkeeper") {
-          router.replace('/(shopkeeper)/tabs/HomeTab');
+          router.push('/(shopkeeper)/tabs/HomeTab');
         } else {
-          router.replace('/(user)/home');
+          router.push('/(user)/home');
         }
       } else {
         Alert.alert("Not Verified", "Please check your email and click the verification link before continuing.");

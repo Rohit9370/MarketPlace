@@ -5,21 +5,23 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    ScrollView,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import MapView, { Marker } from 'react-native-maps';
+// Replaced react-native-maps with OpenStreetMap
+// import MapView, { Marker } from 'react-native-maps';
 import PagerView from "react-native-pager-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from 'react-redux';
 import Typography from "./Comoponents/Typography";
+import OpenStreetMap from './Components/OpenStreetMap';
 import { categories } from './constants/categories';
 import { register } from './Services/auth_services';
 import { uploadToCloudinary } from "./Services/cloudinnery";
@@ -167,8 +169,13 @@ const RegisterShopyScreen = () => {
     setMapVisible(true);
   };
 
-  const handleMapPress = (e) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
+  const handleMapPress = (coordinate, type, markerType) => {
+    // Check if coordinate is provided (could be undefined in some cases)
+    if (!coordinate || !coordinate.lat || !coordinate.lng) {
+      return;
+    }
+    
+    const { lat: latitude, lng: longitude } = coordinate;
     setFormData({
       ...formData,
       shopLocation: { latitude, longitude }
@@ -254,10 +261,19 @@ const RegisterShopyScreen = () => {
       if (result.success) {
         setIsLoading(false);
         
-        // Show success message with email verification info
+        // Show appropriate success message based on user type
+        let successTitle = "Registration Successful!";
+        let successMessage = "A verification email has been sent to your email address.";
+        
+        if (result.requiresAdminApproval) {
+          successMessage += "\n\nYour account will be reviewed by our admin team. You'll receive an email notification once your account is approved.";
+        } else {
+          successMessage += "\n\nPlease verify your email before logging in.";
+        }
+        
         Alert.alert(
-          "Registration Successful!",
-          "A verification email has been sent to your email address. Please verify your email before logging in.",
+          successTitle,
+          successMessage,
           [
             {
               text: "OK",
@@ -269,8 +285,19 @@ const RegisterShopyScreen = () => {
     } catch (err) {
       setIsLoading(false);
       setError(err.message || "Something went wrong during submission.");
-      console.error(err);
-      Alert.alert("Error", err.message || "Something went wrong during submission.");
+      console.error("Registration error:", err);
+      
+      // Show user-friendly error messages
+      Alert.alert(
+        "Registration Failed",
+        err.message || "Something went wrong during registration. Please try again.",
+        [
+          {
+            text: "OK",
+            style: "cancel"
+          }
+        ]
+      );
     }
   };
 
@@ -680,16 +707,21 @@ const RegisterShopyScreen = () => {
           {/* Map Modal */}
           <Modal visible={mapVisible} animationType="slide">
             <View style={{ flex: 1 }}>
-                <MapView
-                    style={{ flex: 1 }}
+                <OpenStreetMap
                     initialRegion={mapRegion}
-                    onPress={handleMapPress}
+                    markers={formData.shopLocation.latitude ? [{
+                        latitude: formData.shopLocation.latitude,
+                        longitude: formData.shopLocation.longitude,
+                        title: "Shop Location",
+                        description: "Selected location",
+                        shopId: "current",
+                        type: "shop"
+                    }] : []}
                     showsUserLocation={true}
-                >
-                    {formData.shopLocation.latitude && (
-                        <Marker coordinate={formData.shopLocation} title="Shop Location" />
-                    )}
-                </MapView>
+                    showsMyLocationButton={true}
+                    onLocationSelect={handleMapPress}
+                    style={{ flex: 1 }}
+                />
                 <View className="absolute bottom-10 left-5 right-5 flex-row justify-between">
                     <TouchableOpacity 
                         onPress={() => setMapVisible(false)} 

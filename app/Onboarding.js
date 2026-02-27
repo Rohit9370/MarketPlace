@@ -11,7 +11,7 @@ export default function Onboarding() {
       {/* Hero Image */}
       <View className="items-center mt-12">
         <Image
-          source={require('./Assets/images/servicewomen.png')}
+          source={require('./Assets/images/workingwomen.png')}
           className="w-64 h-64 rounded-full"
           resizeMode="cover"
         />
@@ -31,12 +31,12 @@ export default function Onboarding() {
       <View className="px-6 mt-10 space-y-4 flex gap-y-12">
         <Button
           title="Find a Service"
-          onPress={() => router.push('/LoginScreen')} 
+          onPress={() => router.push('/RegisterUserScreen')} 
           variant="primary"
         />
         <Button
           title="Register as Shopkeeper"
-          onPress={() => router.push('./(shopkeeper)/Regs')}
+          onPress={() => router.push('/RegisterShopyScreen')}
           variant="outline"
         />
         <Button

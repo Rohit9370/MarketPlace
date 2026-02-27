@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   ScrollView,
   Switch,
   TouchableOpacity,
@@ -34,9 +35,16 @@ export default function ShopkeeperDetailScreen() {
       const shopData = JSON.parse(params.shop);
       setShop(shopData);
 
-      // Load services
-      const shopServices = await getShopServices(shopData.uid);
-      setServices(shopServices);
+      // Load services using the document id which is what services are linked to
+      // Services are linked to shop document id, not auth uid
+      const shopId = shopData.id;
+      if (shopId) {
+        const shopServices = await getShopServices(shopId);
+        setServices(shopServices);
+      } else {
+        console.warn('Shop has no document ID, cannot load services');
+        setServices([]);
+      }
     } catch (error) {
       console.error('Error loading shop details:', error);
       Alert.alert('Error', 'Failed to load shop details');
@@ -85,8 +93,10 @@ export default function ShopkeeperDetailScreen() {
   }
 
   return (
+
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background.secondary }}>
       {/* Header */}
+      {console.log(shop)}
       <View
         style={{
           backgroundColor: '#8b5cf6',
@@ -129,9 +139,9 @@ export default function ShopkeeperDetailScreen() {
           >
             {/* Shop Logo & Name */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing[4] }}>
-              {shop.shopLogo ? (
+              {shop.ownerPhoto ? (
                 <Image
-                  source={{ uri: shop.shopLogo }}
+                  source={{ uri: shop.ownerPhoto }}
                   style={{
                     width: 80,
                     height: 80,
@@ -150,7 +160,7 @@ export default function ShopkeeperDetailScreen() {
                     alignItems: 'center',
                   }}
                 >
-                  <Ionicons name="storefront" size={40} color={Colors.primary[600]} />
+                  <Ionicons name="person" size={40} color={Colors.primary[600]} />
                 </View>
               )}
               <View style={{ marginLeft: Spacing[4], flex: 1 }}>
@@ -291,6 +301,78 @@ export default function ShopkeeperDetailScreen() {
             </View>
           </View>
 
+          {/* Shop Images */}
+          {shop.shopImages && shop.shopImages.length > 0 && (
+            <View
+              style={{
+                backgroundColor: Colors.background.primary,
+                borderRadius: BorderRadius.xl,
+                padding: Spacing[5],
+                marginTop: Spacing[4],
+                ...Shadows.sm,
+              }}
+            >
+              <Typography variant="h4" style={{ marginBottom: Spacing[4] }}>
+                Shop Images
+              </Typography>
+              
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+              >
+                <View style={{ flexDirection: 'row', gap: Spacing[3] }}>
+                  {shop.shopImages.map((image, index) => (
+                    <Image
+                      key={index}
+                      source={{ uri: image }}
+                      style={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: BorderRadius.md,
+                      }}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Video */}
+          {shop.videoUrl && (
+            <View
+              style={{
+                backgroundColor: Colors.background.primary,
+                borderRadius: BorderRadius.xl,
+                padding: Spacing[5],
+                marginTop: Spacing[4],
+                ...Shadows.sm,
+              }}
+            >
+              <Typography variant="h4" style={{ marginBottom: Spacing[3] }}>
+                Video
+              </Typography>
+              
+              <TouchableOpacity
+                onPress={() => Linking.openURL(shop.videoUrl)}
+                style={{
+                  backgroundColor: Colors.primary[100],
+                  padding: Spacing[4],
+                  borderRadius: BorderRadius.md,
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="logo-youtube" size={48} color={Colors.error.main} />
+                <Typography variant="body" weight="semibold" style={{ marginTop: Spacing[2], color: Colors.text.primary }}>
+                  Watch Video
+                </Typography>
+                <Typography variant="caption" color="secondary" style={{ marginTop: Spacing[1] }}>
+                  {shop.videoUrl}
+                </Typography>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Services */}
           <View
             style={{
@@ -357,16 +439,25 @@ export default function ShopkeeperDetailScreen() {
                     <View style={{ flex: 1, justifyContent: 'space-between' }}>
                       <View>
                         <Typography variant="body" weight="semibold">
-                          {service.serviceName || 'Unnamed Service'}
+                          {service.serviceName || service.name || service.title || 'Unnamed Service'}
                         </Typography>
-                        {service.description && (
+                        {(service.description || service.desc) && (
                           <Typography 
                             variant="caption" 
                             color="secondary" 
                             style={{ marginTop: Spacing[1] }}
                             numberOfLines={2}
                           >
-                            {service.description}
+                            {service.description || service.desc}
+                          </Typography>
+                        )}
+                        {(service.duration || service.time) && (
+                          <Typography 
+                            variant="caption" 
+                            color="primary" 
+                            style={{ marginTop: Spacing[1] }}
+                          >
+                            Duration: {service.duration || service.time}
                           </Typography>
                         )}
                       </View>
@@ -374,13 +465,13 @@ export default function ShopkeeperDetailScreen() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing[2] }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing[2] }}>
                           <Typography variant="body" weight="semibold" style={{ color: Colors.primary[600] }}>
-                            ₹{service.price || 0}
+                            ₹{service.price || service.cost || 0}
                           </Typography>
-                          {service.duration && (
+                          {(service.duration || service.time) && (
                             <>
                               <Typography variant="caption" color="secondary">•</Typography>
                               <Typography variant="caption" color="secondary">
-                                {service.duration}
+                                {service.duration || service.time}
                               </Typography>
                             </>
                           )}

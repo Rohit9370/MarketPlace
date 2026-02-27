@@ -12,10 +12,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+// Replaced react-native-maps with OpenStreetMap
+// import MapView, { Marker } from 'react-native-maps';
 import Avatar from '../Comoponents/Avatar';
 import Button from '../Comoponents/Button';
 import Typography from '../Comoponents/Typography';
+import OpenStreetMap from '../Components/OpenStreetMap';
 import { BorderRadius, Colors, Spacing } from '../constants/designSystem';
 
 
@@ -99,8 +101,13 @@ export default function EditProfileModal({ visible, onClose, userData, onSave })
     setMapVisible(true);
   };
 
-  const handleMapPress = (e) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
+  const handleMapPress = (coordinate, type, markerType) => {
+    // Check if coordinate is provided (could be undefined in some cases)
+    if (!coordinate || !coordinate.lat || !coordinate.lng) {
+      return;
+    }
+    
+    const { lat: latitude, lng: longitude } = coordinate;
     setEditData({
       ...editData,
       shopLocation: { latitude, longitude },
@@ -406,16 +413,21 @@ export default function EditProfileModal({ visible, onClose, userData, onSave })
       {/* Map Modal */}
       <Modal visible={mapVisible} animationType="slide">
         <View style={{ flex: 1 }}>
-          <MapView
-            style={{ flex: 1 }}
+          <OpenStreetMap
             initialRegion={mapRegion}
-            onPress={handleMapPress}
+            markers={editData.shopLocation.latitude ? [{
+              latitude: editData.shopLocation.latitude,
+              longitude: editData.shopLocation.longitude,
+              title: "Shop Location",
+              description: "Selected location",
+              shopId: "current",
+              type: "shop"
+            }] : []}
             showsUserLocation={true}
-          >
-            {editData.shopLocation.latitude && (
-              <Marker coordinate={editData.shopLocation} title="Shop Location" />
-            )}
-          </MapView>
+            showsMyLocationButton={true}
+            onLocationSelect={handleMapPress}
+            style={{ flex: 1 }}
+          />
           <View style={{
             position: 'absolute',
             bottom: Spacing[10],

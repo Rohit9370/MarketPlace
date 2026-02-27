@@ -5,18 +5,19 @@ import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Modal,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+// Replaced react-native-maps with OpenStreetMap
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import Avatar from '../../Comoponents/Avatar';
 import Typography from '../../Comoponents/Typography';
+import OpenStreetMap from '../../Components/OpenStreetMap';
 import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/designSystem';
 import { logout, updateUser } from '../../redux/authSlice';
 import { uploadToCloudinary } from '../../Services/cloudinnery';
@@ -784,30 +785,33 @@ export default function ProfileTab() {
 
           <View style={{ flex: 1 }}>
             {selectedLocation && (
-              <MapView
-                style={{ flex: 1 }}
+              <OpenStreetMap
                 initialRegion={{
                   latitude: selectedLocation.latitude,
                   longitude: selectedLocation.longitude,
                   latitudeDelta: 0.01,
                   longitudeDelta: 0.01,
                 }}
-                onPress={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
-              >
-                <Marker
-                  coordinate={selectedLocation}
-                  draggable
-                  onDragEnd={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
-                >
-                  <View style={{
-                    backgroundColor: Colors.primary[600],
-                    padding: Spacing[2],
-                    borderRadius: BorderRadius.full,
-                  }}>
-                    <Ionicons name="location" size={24} color="white" />
-                  </View>
-                </Marker>
-              </MapView>
+                markers={[{
+                  latitude: selectedLocation.latitude,
+                  longitude: selectedLocation.longitude,
+                  title: "Current Location",
+                  description: "Drag to adjust location",
+                  shopId: "current",
+                  type: "shop"
+                }]}
+                showsMyLocationButton={true}
+                onLocationSelect={(coordinate) => {
+                  // Check if coordinate is provided (could be undefined in some cases)
+                  if (!coordinate || !coordinate.lat || !coordinate.lng) {
+                    return;
+                  }
+                  
+                  const { lat: latitude, lng: longitude } = coordinate;
+                  setSelectedLocation({ latitude, longitude });
+                }}
+                style={{ flex: 1 }}
+              />
             )}
           </View>
 
@@ -827,7 +831,7 @@ export default function ProfileTab() {
                 Selected Coordinates:
               </Typography>
               <Typography variant="body" weight="medium">
-                {selectedLocation 
+                {selectedLocation && selectedLocation.latitude !== undefined && selectedLocation.longitude !== undefined
                   ? `${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`
                   : 'No location selected'}
               </Typography>

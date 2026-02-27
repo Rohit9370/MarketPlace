@@ -4,6 +4,7 @@ import { auth, db } from "./firebase";
 
 export async function register(formData) {
   try {
+    // Create Firebase user
     const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
     
     if (userCredential) {
@@ -12,27 +13,47 @@ export async function register(formData) {
       
       const collectionName = formData.role === "shopkeeper" ? "shop" : "user";
       
-      // Remove password from data before storing
+      // Remove password fields from data before storing
       const { password, confirmPassword, ...dataToStore } = formData;
+      
+      // Prepare user data
       const userdata = {
         ...dataToStore,
         uid: userCredential.user.uid,
         emailVerified: false,
-        createdAt: new Date().toISOString()
+        // For shopkeepers, default to inactive until admin approval
+        isActive: formData.role === "shopkeeper" ? false : true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
+      // Store in Firestore
       const docRef = await addDoc(collection(db, collectionName), userdata);
+      
       console.log("User registered successfully with ID:", docRef.id);
+      
       return { 
         success: true, 
         userId: userCredential.user.uid, 
         docId: docRef.id,
-        emailSent: true 
+        emailSent: true,
+        requiresEmailVerification: true,
+        requiresAdminApproval: formData.role === "shopkeeper"
       };
     }
   } catch (err) {
     console.error("Registration error:", err);
-    throw new Error(err.message || "Registration failed");
+    
+    // Handle specific Firebase errors
+    if (err.code === "auth/email-already-in-use") {
+      throw new Error("This email is already registered. Please use a different email or try logging in.");
+    } else if (err.code === "auth/invalid-email") {
+      throw new Error("Please enter a valid email address.");
+    } else if (err.code === "auth/weak-password") {
+      throw new Error("Password should be at least 6 characters long.");
+    } else {
+      throw new Error(err.message || "Registration failed. Please try again.");
+    }
   }
 }
 

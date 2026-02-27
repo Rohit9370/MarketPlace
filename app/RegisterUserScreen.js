@@ -3,9 +3,11 @@ import * as Location from 'expo-location';
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Modal, ScrollView, TextInput, TouchableOpacity, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+// Replaced react-native-maps with OpenStreetMap
+// import MapView, { Marker } from "react-native-maps";
 import { useDispatch } from "react-redux";
 import Typography from "./Comoponents/Typography";
+import OpenStreetMap from "./Components/OpenStreetMap";
 import { register } from "./Services/auth_services";
 
 const RegisterUserScreen = () => {
@@ -39,102 +41,97 @@ const RegisterUserScreen = () => {
     longitudeDelta: 0.05,
   });
 
-  const handleMapPress = (event) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
+  const handleMapPress = (coordinate, type, markerType) => {
+    // Check if coordinate is provided (could be undefined in some cases)
+    if (!coordinate || !coordinate.lat || !coordinate.lng) {
+      return;
+    }
+    
+    const { lat: latitude, lng: longitude } = coordinate;
     setSelectedLocation({ latitude, longitude });
   };
 
   const confirmLocation = async () => {
+    setMapVisible(false);
     try {
-      // Reverse geocode to get address details
-      const result = await Location.reverseGeocodeAsync(selectedLocation);
-      
-      if (result && result.length > 0) {
-        const location = result[0];
-        const address = `${location.street || ''} ${location.name || ''} ${location.subregion || ''}`.trim();
-        const city = location.city || location.subregion || location.region || '';
-        const pincode = location.postalCode || '';
+        const { latitude, longitude } = selectedLocation;
+        if (latitude && longitude) {
+            let addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
+            if (addressResponse.length > 0) {
+                const addressParams = addressResponse[0];
+                const formattedAddress = `${addressParams.name || ''} ${addressParams.street || ''}, ${addressParams.subregion || ''}, ${addressParams.city || ''}, ${addressParams.region || ''}, ${addressParams.postalCode || ''}`;
+                
+                setFormData({
+                    ...formData,
+                    address: formattedAddress.replace(/ ,/g, '').trim(),
+                    city: addressParams.city || addressParams.subregion || "",
+                    pincode: addressParams.postalCode || "",
+                    location: { latitude, longitude }
+                });
+                
+                Alert.alert("Success", "Location selected successfully!");
+                return;
+            }
+        }
         
-        setFormData({
-          ...formData,
-          address: address || `Lat: ${selectedLocation.latitude.toFixed(4)}, Lng: ${selectedLocation.longitude.toFixed(4)}`,
-          city: city,
-          pincode: pincode,
-          location: selectedLocation,
-        });
-        setMapVisible(false);
-        Alert.alert("Success", "Location selected successfully!");
-      } else {
-        // Fallback: Save coordinates and let user enter manually
+        // Fallback: Save coordinates
         setFormData({
           ...formData,
           address: `Lat: ${selectedLocation.latitude.toFixed(4)}, Lng: ${selectedLocation.longitude.toFixed(4)}`,
           location: selectedLocation,
         });
-        setMapVisible(false);
+        
         Alert.alert(
           "Location Saved", 
           "Coordinates saved. Please enter city and pincode manually.",
           [
             {
               text: "OK",
-              onPress: () => {
-                setAllowManualEntry(true);
-              }
+              onPress: () => setAllowManualEntry(true)
             }
           ]
         );
-      }
     } catch (error) {
-      console.error("Geocoding error:", error);
-      // Fallback: Save coordinates anyway
-      setFormData({
-        ...formData,
-        address: `Lat: ${selectedLocation.latitude.toFixed(4)}, Lng: ${selectedLocation.longitude.toFixed(4)}`,
-        location: selectedLocation,
-      });
-      setMapVisible(false);
-      Alert.alert(
-        "Location Saved", 
-        "Coordinates saved. Please enter city and pincode manually.",
-        [
-          {
-            text: "OK",
-            onPress: () => setAllowManualEntry(true)
-          }
-        ]
-      );
+        console.log("Geocoding Error: ", error);
+        
+        // Fallback: Save coordinates anyway
+        setFormData({
+          ...formData,
+          address: `Lat: ${selectedLocation.latitude.toFixed(4)}, Lng: ${selectedLocation.longitude.toFixed(4)}`,
+          location: selectedLocation,
+        });
+        
+        Alert.alert(
+          "Location Saved", 
+          "Coordinates saved. Please enter city and pincode manually.",
+          [
+            {
+              text: "OK",
+              onPress: () => setAllowManualEntry(true)
+            }
+          ]
+        );
     }
   };
 
   const openMapPicker = async () => {
-    try {
-      // Request location permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to pick location');
-        return;
-      }
-
-      // Get current location
-      const location = await Location.getCurrentPositionAsync({});
-      setSelectedLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-      setMapRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
-      
-      setMapVisible(true);
-    } catch (error) {
-      console.error("Location error:", error);
-      setMapVisible(true); // Open with default location
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission to access location was denied');
+      return;
     }
+
+    let location = await Location.getCurrentPositionAsync({});
+    setSelectedLocation({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    });
+    setMapRegion({
+      ...mapRegion,
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    });
+    setMapVisible(true);
   };
 
   const handleRegister = async () => {
@@ -479,36 +476,32 @@ const RegisterUserScreen = () => {
 
     <Modal visible={mapVisible} animationType="slide">
       <View style={{ flex: 1 }}>
-        <MapView
-          style={{ flex: 1 }}
+        <OpenStreetMap
           initialRegion={mapRegion}
-          onPress={handleMapPress}
+          markers={selectedLocation.latitude ? [{
+            latitude: selectedLocation.latitude,
+            longitude: selectedLocation.longitude,
+            title: "Selected Location",
+            description: "Selected location",
+            shopId: "current",
+            type: "user"
+          }] : []}
           showsUserLocation={true}
-        >
-          {selectedLocation.latitude && (
-            <Marker 
-              coordinate={selectedLocation} 
-              title="Selected Location"
-              draggable
-              onDragEnd={handleMapPress}
-            >
-              <View style={{ alignItems: 'center' }}>
-                <Ionicons name="location" size={40} color="#ef4444" />
-              </View>
-            </Marker>
-          )}
-        </MapView>
+          showsMyLocationButton={true}
+          onLocationSelect={handleMapPress}
+          style={{ flex: 1 }}
+        />
         
-        <View className="absolute bottom-10 left-5 right-5 flex-row justify-between gap-3">
+        <View className="absolute bottom-10 left-5 right-5 flex-row justify-between">
           <TouchableOpacity 
             onPress={() => setMapVisible(false)} 
-            className="bg-red-500 p-4 rounded-lg flex-1 items-center"
+            className="bg-red-500 p-4 rounded-lg flex-1 mr-2 items-center"
           >
             <Typography variant="v2" className="text-white font-bold">Cancel</Typography>
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={confirmLocation} 
-            className="bg-green-600 p-4 rounded-lg flex-1 items-center"
+            className="bg-green-600 p-4 rounded-lg flex-1 ml-2 items-center"
           >
             <Typography variant="v2" className="text-white font-bold">Confirm Location</Typography>
           </TouchableOpacity>

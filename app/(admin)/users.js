@@ -197,7 +197,7 @@ export default function UsersTab() {
                     source={
                       user.photo
                         ? { uri: user.photo }
-                        : require('../Assets/images/servicewomen.png')
+                        : require('../Assets/images/workingwomen.png')
                     }
                     style={{
                       width: 64,

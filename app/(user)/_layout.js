@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Colors } from '../constants/designSystem';
 
@@ -15,13 +16,14 @@ export default function UserLayout() {
           backgroundColor: Colors.background.primary,
           borderTopWidth: 1,
           borderTopColor: Colors.border.light,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 15,
+          paddingTop: Platform.OS === 'ios' ? 10 : 10,
+          height: Platform.OS === 'ios' ? 80 : 95,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: '600',
+          marginBottom: 5,
         },
         headerShown: false,
       }}
