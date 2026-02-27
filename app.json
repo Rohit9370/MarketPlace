@@ -7,19 +7,30 @@
     "icon": "./assets/images/icon.png",
     "scheme": "growwithus",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "package": "com.yash133.GrowWithUs",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummy-Key-Replace-With-Real-One"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -27,6 +38,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow GrowWithUs to use your location to find nearby services."
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -43,6 +60,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7e8f4373-fe37-4fa1-8cd4-16a2f2f51866"
+      }
     }
   }
 }

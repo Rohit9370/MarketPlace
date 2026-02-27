@@ -1,0 +1,17 @@
+export const categories = [
+  { id: 1, name: "Plumbing", serviceName: "Plumbing", icon: "water" },
+  { id: 2, name: "Electrician", serviceName: "Electrician", icon: "flash" },
+  { id: 3, name: "Carpenter", serviceName: "Carpenter", icon: "hammer" },
+  { id: 4, name: "Painter", serviceName: "Painter", icon: "color-fill" },
+  { id: 5, name: "Cleaning", serviceName: "Cleaning", icon: "sparkles" },
+  { id: 6, name: "Pest Control", serviceName: "Pest Control", icon: "bug" },
+  { id: 7, name: "Appliance Repair", serviceName: "Appliance Repair", icon: "construct" },
+  { id: 8, name: "Home Salon", serviceName: "Home Salon", icon: "cut" },
+  { id: 9, name: "Gardening", serviceName: "Gardening", icon: "leaf" },
+  { id: 10, name: "Car Wash", serviceName: "Car Wash", icon: "car" },
+  { id: 11, name: "AC Repair", serviceName: "AC Repair", icon: "snow" },
+  { id: 12, name: "Mobile Repair", serviceName: "Mobile Repair", icon: "phone-portrait" },
+  { id: 13, name: "Computer Repair", serviceName: "Computer Repair", icon: "desktop" },
+  { id: 14, name: "Tutor", serviceName: "Tutor", icon: "school" },
+  { id: 15, name: "Yoga Trainer", serviceName: "Yoga Trainer", icon: "fitness" },
+];
