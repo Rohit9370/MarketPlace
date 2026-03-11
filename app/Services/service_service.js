@@ -47,6 +47,7 @@ export async function getShopServices(shopId) {
       });
     });
     
+    console.log(`Fetched ${services.length} services for shopId: ${shopId}`);
     return services;
   } catch (error) {
     console.error("Error fetching shop services:", error);

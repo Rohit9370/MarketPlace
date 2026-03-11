@@ -75,6 +75,8 @@ export default function HomeTab() {
       });
     } catch (error) {
       console.error('Error getting location:', error);
+      // Show a warning to the user about location issues
+      Alert.alert('Location Error', 'Unable to get your location. Some features may be limited.');
     }
   };
 
@@ -103,6 +105,7 @@ export default function HomeTab() {
       
     } catch (error) {
       console.error('Error loading shopkeepers:', error);
+      Alert.alert('Data Loading Error', 'Failed to load shopkeepers. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }

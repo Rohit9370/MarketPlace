@@ -5,15 +5,15 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    ScrollView,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 // Replaced react-native-maps with OpenStreetMap
 // import MapView, { Marker } from 'react-native-maps';
@@ -147,26 +147,31 @@ const RegisterShopyScreen = () => {
 
 
   const openMap = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission to access location was denied');
-      return;
-    }
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied', 'Location permission is required to select your shop location. Please enable it in your device settings.');
+        return;
+      }
 
-    let location = await Location.getCurrentPositionAsync({});
-    setMapRegion({
-      ...mapRegion,
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
-    setFormData({
-      ...formData,
-      shopLocation: {
+      let location = await Location.getCurrentPositionAsync({});
+      setMapRegion({
+        ...mapRegion,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      }
-    });
-    setMapVisible(true);
+      });
+      setFormData({
+        ...formData,
+        shopLocation: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        }
+      });
+      setMapVisible(true);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Location Error', 'Unable to retrieve your location. Please try again or enter your location manually.');
+    }
   };
 
   const handleMapPress = (coordinate, type, markerType) => {
@@ -202,8 +207,8 @@ const RegisterShopyScreen = () => {
             }
         }
     } catch (error) {
-        console.log("Geocoding Error: ", error);
-        Alert.alert("Error", "Could not fetch address details.");
+        console.error("Geocoding Error: ", error);
+        Alert.alert("Location Error", "Could not fetch address details. Please enter your address manually.");
     }
   };
 
@@ -287,10 +292,28 @@ const RegisterShopyScreen = () => {
       setError(err.message || "Something went wrong during submission.");
       console.error("Registration error:", err);
       
-      // Show user-friendly error messages
+      // Enhanced error handling with specific messages
+      let errorMessage = "Registration failed. Please try again.";
+      
+      if (err.message.includes("email-already-in-use")) {
+        errorMessage = "This email is already registered. Please use a different email or try logging in.";
+      } else if (err.message.includes("invalid-email")) {
+        errorMessage = "Please enter a valid email address.";
+      } else if (err.message.includes("weak-password")) {
+        errorMessage = "Password should be at least 6 characters long.";
+      } else if (err.message.includes("network")) {
+        errorMessage = "Network error occurred. Please check your connection and try again.";
+      } else if (err.message.includes("timeout")) {
+        errorMessage = "Request timed out. Please check your connection and try again.";
+      } else if (err.message.includes("upload") || err.message.includes("cloudinary")) {
+        errorMessage = "Failed to upload images. Please check your connection and try again.";
+      } else if (err.message.includes("missing")) {
+        errorMessage = "Required information is missing. Please check all required fields.";
+      }
+      
       Alert.alert(
         "Registration Failed",
-        err.message || "Something went wrong during registration. Please try again.",
+        errorMessage,
         [
           {
             text: "OK",
@@ -357,37 +380,47 @@ const RegisterShopyScreen = () => {
   };
 
   const pickImage = async (field) => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: field === "shopBanner" ? [1, 1] : [16, 9],
-      quality: 0.7,
-    });
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: field === "shopBanner" ? [1, 1] : [16, 9],
+        quality: 0.7,
+      });
 
-    if (!result.canceled) {
-      if (field === "shopImages") {
-        setFormData({ ...formData, shopImages: [...formData.shopImages, result.assets[0].uri] });
-      } else {
-        setFormData({ ...formData, [field]: result.assets[0].uri });
+      if (!result.canceled) {
+        if (field === "shopImages") {
+          setFormData({ ...formData, shopImages: [...formData.shopImages, result.assets[0].uri] });
+        } else {
+          setFormData({ ...formData, [field]: result.assets[0].uri });
+        }
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Image Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const takePhoto = async (field) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Camera access is required to take photos');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is required to take photos. Please enable camera permissions in your device settings.');
+        return;
+      }
 
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: field === "shopBanner" ? [1, 1] : [16, 9],
-      quality: 0.7,
-    });
+      let result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: field === "shopBanner" ? [1, 1] : [16, 9],
+        quality: 0.7,
+      });
 
-    if (!result.canceled) {
-      setFormData({ ...formData, [field]: result.assets[0].uri });
+      if (!result.canceled) {
+        setFormData({ ...formData, [field]: result.assets[0].uri });
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Camera Error', 'Failed to take photo. Please try again or select from gallery.');
     }
   };
 

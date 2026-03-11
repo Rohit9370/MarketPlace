@@ -225,10 +225,21 @@ const OpenStreetMap = ({
             
             // Fit bounds if we have markers
             if (markers.length > 0) {
-                const group = L.featureGroup(markers.map(m => {
-                    return L.marker([m.latitude, m.longitude]);
-                }));
-                map.fitBounds(group.getBounds().pad(0.1));
+                try {
+                    const markerLayers = [];
+                    markers.forEach(m => {
+                        if (m.latitude && m.longitude) {
+                            markerLayers.push(L.marker([m.latitude, m.longitude]));
+                        }
+                    });
+                    
+                    if (markerLayers.length > 0) {
+                        const group = L.featureGroup(markerLayers);
+                        map.fitBounds(group.getBounds().pad(0.1));
+                    }
+                } catch (error) {
+                    console.error('Error fitting bounds to markers:', error);
+                }
             }
             
             // Expose functions to React Native

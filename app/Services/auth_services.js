@@ -8,13 +8,23 @@ export async function register(formData) {
     const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
     
     if (userCredential) {
-      // Send email verification
-      await sendEmailVerification(userCredential.user);
+      try {
+        // Send email verification
+        console.log('📧 Sending verification email to:', userCredential.user.email);
+        await sendEmailVerification(userCredential.user);
+        console.log('✅ Verification email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email:', emailError);
+        // Don't throw error here, registration still succeeded
+        // User can resend verification email from verification screen
+      }
       
       const collectionName = formData.role === "shopkeeper" ? "shop" : "user";
       
       // Remove password fields from data before storing
       const { password, confirmPassword, ...dataToStore } = formData;
+      
+      console.log('💾 Data to store in Firestore:', dataToStore);
       
       // Prepare user data
       const userdata = {
@@ -26,6 +36,8 @@ export async function register(formData) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+      
+      console.log('✅ Final user data to save:', userdata);
       
       // Store in Firestore
       const docRef = await addDoc(collection(db, collectionName), userdata);
@@ -124,6 +136,13 @@ export async function login(email, password) {
             
             const shouldSkipVerification = skipVerificationEmails.includes(email.toLowerCase()) || 
                                           userData.role === 'admin';
+            
+            console.log('📧 Login attempt:', {
+              email,
+              isEmailVerified: userCredential.user.emailVerified,
+              shouldSkipVerification,
+              role: userData.role
+            });
             
             // Return user data with email verification status
             return { 

@@ -93,17 +93,21 @@ export default function LoginScreen() {
       
       if (result.success) {
         if (!result.emailVerified) {
-          // Reset loading state before redirecting
+          // Email not verified - navigate to verification screen
           dispatch(loginFailure("Email not verified"));
           
-          // Redirect to email verification screen
+          // Prepare clean user data for navigation
+          const navigationData = {
+            uid: result.user.uid,
+            email: result.user.email,
+            displayName: result.userData?.name || result.userData?.ownerName || '',
+            role: result.role
+          };
+          
           router.push({
             pathname: '/EmailVerificationScreen',
             params: {
-              userData: JSON.stringify({
-                ...result.user,
-                ...result.userData
-              }),
+              userData: JSON.stringify(navigationData),
               role: result.role
             }
           });
@@ -130,30 +134,47 @@ export default function LoginScreen() {
 
         Alert.alert("Success", `Welcome ${result.userData.ownerName || result.userData.name || 'Back'}!`);
         
-        // Navigate based on role
+        // Navigate based on role - use replace to prevent back navigation to login
         if (result.role === 'admin') {
-          router.push('/(admin)/dashboard');
+          router.replace('/(admin)/dashboard');
         } else if (result.role === 'shopkeeper') {
-          router.push('/(shopkeeper)/tabs/HomeTab');
+          router.replace('/(shopkeeper)/tabs/HomeTab');
         } else {
-          router.push('/(user)/home');
+          router.replace('/(user)/home');
         }
       }
     } catch (error) {
+      console.error('Login error:', error);
       const errorMessage = error.message || 'Invalid credentials';
       dispatch(loginFailure(errorMessage));
       
-      // More specific error messages
+      // Production-ready user-friendly error messages
       let alertMessage = errorMessage;
-      if (errorMessage.includes('user-not-found')) {
+      
+      if (error.code === 'auth/invalid-credential' || errorMessage.includes('invalid-credential')) {
+        alertMessage = 'Invalid email or password. Please check your credentials.';
+      } else if (errorMessage.includes('user-not-found')) {
         alertMessage = 'No account found with this email. Please check your email or register.';
       } else if (errorMessage.includes('wrong-password')) {
         alertMessage = 'Incorrect password. Please try again.';
       } else if (errorMessage.includes('too-many-requests')) {
         alertMessage = 'Too many failed attempts. Please try again later.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('network-request-failed')) {
+        alertMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (errorMessage.includes('invalid-email')) {
+        alertMessage = 'Invalid email address format. Please enter a valid email.';
       }
       
-      Alert.alert('Login Failed', alertMessage);
+      Alert.alert('Login Failed', alertMessage, [
+        {
+          text: 'OK',
+          style: 'cancel'
+        },
+        {
+          text: 'Register',
+          onPress: () => router.push('/RegisterUserScreen')
+        }
+      ]);
     }
   };
 
@@ -203,7 +224,7 @@ export default function LoginScreen() {
                 marginBottom: 16,
               }}>
                 <Image
-                  source={require('./Assets/icons/icon.png')}
+                  source={require('./Assets/images/icon.png')}
                   style={{ width: 70, height: 70, borderRadius: 35 }}
                   resizeMode="contain"
                 />
@@ -259,7 +280,7 @@ export default function LoginScreen() {
                   <Typography variant="caption" weight="medium" style={{ color: Colors.text.primary }}>
                     Password
                   </Typography>
-                  <TouchableOpacity onPress={() => router.push('/ForgotPassword')}>
+                  <TouchableOpacity onPress={() => router.push('/ForgotPasswordScreen')}>
                     <Typography variant="caption" color="primary" weight="medium">
                       Forgot Password?
                     </Typography>

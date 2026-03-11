@@ -18,11 +18,11 @@ export default function Onboarding() {
       </View>
 
       {/* App Info */}
-      <View className="px-6 mt-8">
-        <Typography variant="v1" className="text-3xl mx-auto">
+      <View className="px-6 mt-8 ">
+        <Typography variant="v4" className="font-bold text-gray-900 text-2xl mx-auto">
           Welcome to GrowWithUs
         </Typography>
-        <Typography variant="v4" className="flex text-gray-600 text-center mt-2">
+        <Typography variant="v4" className="flex text-gray-600 text-center mt-2 font-medium">
           Find trusted service professionals near you or list your services and grow your business.
         </Typography>
       </View>

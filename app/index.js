@@ -33,9 +33,10 @@ export default function Index() {
       const userRole = await getUserRole();
 
       if (userData && userRole) {
+        console.log('✅ Existing login found, navigating to:', userRole);
         dispatch(setUser({ user: userData, role: userRole }));
         
-        // Navigate immediately
+        // Navigate immediately - use replace to prevent back navigation
         if (userRole === 'admin') {
           router.replace('/(admin)/dashboard');
         } else if (userRole === 'shopkeeper') {
@@ -44,18 +45,20 @@ export default function Index() {
           router.replace('/(user)/home');
         }
       } else {
+        console.log('ℹ️ No existing login, showing onboarding');
         // No existing login, show splash then onboarding
         setTimeout(() => {
           setIsLoading(false);
           setIsCheckingAuth(false);
-        }, 2000);
+        }, 500); // Reduced delay for faster load
       }
     } catch (error) {
       console.error('Error checking login:', error);
+      // On error, show onboarding as fallback
       setTimeout(() => {
         setIsLoading(false);
         setIsCheckingAuth(false);
-      }, 2000);
+      }, 500);
     }
   };
 

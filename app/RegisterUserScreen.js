@@ -23,6 +23,10 @@ const RegisterUserScreen = () => {
     pincode: "",
     password: "",
     confirmPassword: "",
+    location: {
+      latitude: null,
+      longitude: null
+    }
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -92,7 +96,7 @@ const RegisterUserScreen = () => {
           ]
         );
     } catch (error) {
-        console.log("Geocoding Error: ", error);
+        console.error("Geocoding Error: ", error);
         
         // Fallback: Save coordinates anyway
         setFormData({
@@ -103,7 +107,7 @@ const RegisterUserScreen = () => {
         
         Alert.alert(
           "Location Saved", 
-          "Coordinates saved. Please enter city and pincode manually.",
+          "Unable to fetch address details. Coordinates saved. Please enter city and pincode manually.",
           [
             {
               text: "OK",
@@ -115,23 +119,28 @@ const RegisterUserScreen = () => {
   };
 
   const openMapPicker = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission to access location was denied');
-      return;
-    }
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied', 'Location permission is required to select your location. Please enable it in your device settings.');
+        return;
+      }
 
-    let location = await Location.getCurrentPositionAsync({});
-    setSelectedLocation({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
-    setMapRegion({
-      ...mapRegion,
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
-    setMapVisible(true);
+      let location = await Location.getCurrentPositionAsync({});
+      setSelectedLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      setMapRegion({
+        ...mapRegion,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      setMapVisible(true);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Location Error', 'Unable to retrieve your location. Please try again or enter your location manually.');
+    }
   };
 
   const handleRegister = async () => {
@@ -207,6 +216,8 @@ const RegisterUserScreen = () => {
         createdAt: new Date().toISOString(),
       };
       
+      console.log('📝 Registering user with data:', registrationData);
+      
       // Register user
       const result = await register(registrationData);
       
@@ -225,7 +236,23 @@ const RegisterUserScreen = () => {
       }
     } catch (error) {
       console.error("Registration error:", error);
-      Alert.alert("Registration Failed", error.message);
+      
+      // Enhanced error handling with specific messages
+      let errorMessage = "Registration failed. Please try again.";
+      
+      if (error.message.includes("email-already-in-use")) {
+        errorMessage = "This email is already registered. Please use a different email or try logging in.";
+      } else if (error.message.includes("invalid-email")) {
+        errorMessage = "Please enter a valid email address.";
+      } else if (error.message.includes("weak-password")) {
+        errorMessage = "Password should be at least 6 characters long.";
+      } else if (error.message.includes("network")) {
+        errorMessage = "Network error occurred. Please check your connection and try again.";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "Request timed out. Please check your connection and try again.";
+      }
+      
+      Alert.alert("Registration Failed", errorMessage);
     } finally {
       setIsLoading(false);
     }

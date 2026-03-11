@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Linking,
-  ScrollView,
-  Switch,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    ScrollView,
+    Switch,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Typography from '../Comoponents/Typography';
@@ -35,16 +35,42 @@ export default function ShopkeeperDetailScreen() {
       const shopData = JSON.parse(params.shop);
       setShop(shopData);
 
-      // Load services using the document id which is what services are linked to
-      // Services are linked to shop document id, not auth uid
-      const shopId = shopData.id;
-      if (shopId) {
-        const shopServices = await getShopServices(shopId);
-        setServices(shopServices);
+      // Check if services are already included in the shop data
+      let shopServices = [];
+      
+      // First, check if services are stored directly in the shop document
+      if (shopData.services && Array.isArray(shopData.services)) {
+        // Handle services stored directly in the shop document
+        shopServices = shopData.services.map((service, index) => ({
+          id: `direct-${index}`,
+          ...service,
+          isActive: service.isActive !== false
+        }));
+      } else if (shopData.shopServices && Array.isArray(shopData.shopServices)) {
+        // Also check for alternative property name
+        shopServices = shopData.shopServices.map((service, index) => ({
+          id: `direct-${index}`,
+          ...service,
+          isActive: service.isActive !== false
+        }));
       } else {
-        console.warn('Shop has no document ID, cannot load services');
-        setServices([]);
+        // Load services from separate collection using the document id
+        // Services are linked to shop document id, not auth uid
+        const shopId = shopData.id;
+        if (shopId) {
+          try {
+            shopServices = await getShopServices(shopId);
+          } catch (serviceError) {
+            console.error('Error loading shop services:', serviceError);
+            Alert.alert('Service Loading Error', 'Failed to load services for this shop. They may not have added any services yet.');
+            shopServices = [];
+          }
+        } else {
+          console.warn('Shop has no document ID, cannot load services');
+        }
       }
+      
+      setServices(shopServices);
     } catch (error) {
       console.error('Error loading shop details:', error);
       Alert.alert('Error', 'Failed to load shop details');
@@ -387,6 +413,11 @@ export default function ShopkeeperDetailScreen() {
             <Typography variant="h4" style={{ marginBottom: Spacing[4] }}>
               Services ({services.length})
             </Typography>
+            {services.length > 0 && (
+              <Typography variant="caption" color="secondary" style={{ marginBottom: Spacing[3] }}>
+                Showing all services offered by this shopkeeper
+              </Typography>
+            )}
 
             {services.length === 0 ? (
               <View style={{ paddingVertical: Spacing[4], alignItems: 'center' }}>
